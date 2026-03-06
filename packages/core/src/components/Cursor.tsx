@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Flex } from ".";
 
@@ -10,9 +10,9 @@ interface CursorProps {
 }
 
 export const Cursor: React.FC<CursorProps> = ({ cursor, elementRef }) => {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const cursorRef = useRef<HTMLDivElement>(null);
 
   // Detect touch device
   useEffect(() => {
@@ -40,21 +40,15 @@ export const Cursor: React.FC<CursorProps> = ({ cursor, elementRef }) => {
   }, []);
 
   // Mouse tracking for custom cursor (only on non-touch devices)
+  // Uses direct DOM manipulation via ref to avoid React re-renders on every mousemove
   useEffect(() => {
     if (!cursor || !elementRef.current || isTouchDevice) return;
 
-    let animationFrameId: number;
-
     const handleMouseMove = (e: MouseEvent) => {
-      // Cancel previous animation frame to prevent multiple updates
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
+      const el = cursorRef.current;
+      if (el) {
+        el.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0) translate(-50%, -50%)`;
       }
-
-      // Schedule the update for the next animation frame
-      animationFrameId = requestAnimationFrame(() => {
-        setMousePosition({ x: e.clientX, y: e.clientY });
-      });
     };
 
     const handleMouseEnter = () => {
@@ -73,9 +67,6 @@ export const Cursor: React.FC<CursorProps> = ({ cursor, elementRef }) => {
     }
 
     return () => {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
       if (element) {
         element.removeEventListener("mouseenter", handleMouseEnter);
         element.removeEventListener("mouseleave", handleMouseLeave);
@@ -89,13 +80,14 @@ export const Cursor: React.FC<CursorProps> = ({ cursor, elementRef }) => {
 
   return createPortal(
     <Flex
+      ref={cursorRef}
       position="fixed"
       pointerEvents="none"
       zIndex={10}
       style={{
-        left: mousePosition.x,
-        top: mousePosition.y,
-        transform: "translate(-50%, -50%)",
+        left: 0,
+        top: 0,
+        willChange: "transform",
         transition: "none",
       }}
     >

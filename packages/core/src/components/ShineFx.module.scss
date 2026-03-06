@@ -13,6 +13,7 @@
   -webkit-background-clip: text;
   background-clip: text;
   animation: shine 5s linear infinite;
+  will-change: background-position;
 }
 
 .inverse {

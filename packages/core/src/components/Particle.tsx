@@ -49,23 +49,31 @@ const Particle = React.forwardRef<HTMLDivElement, ParticleProps>(
 
     useEffect(() => {
       const container = containerRef.current;
+      if (!container) return;
+
       const particles: HTMLElement[] = [];
-      const particleTargets = new Map<HTMLElement, { x: number; y: number }>();
+      const particlePositions = new Map<HTMLElement, { x: number; y: number }>();
       const initialPositions = new Map<HTMLElement, { x: number; y: number }>();
       let mousePosition = { x: -1000, y: -1000 };
       let animationFrameId: number;
+      let containerRect = container.getBoundingClientRect();
 
       const parsedSize = `var(--static-space-${size})`;
       const parsedOpacity = `${opacity}%`;
       const movementSpeed = speed * 0.08;
       const repulsionStrength = 0.15 * (speed || 1);
 
+      const handleResize = () => {
+        containerRect = container.getBoundingClientRect();
+      };
+
+      const resizeObserver = new ResizeObserver(handleResize);
+      resizeObserver.observe(container);
+
       const handleMouseMove = (e: MouseEvent) => {
-        const rect = container?.getBoundingClientRect();
-        if (!rect) return;
         mousePosition = {
-          x: ((e.clientX - rect.left) / rect.width) * 100,
-          y: ((e.clientY - rect.top) / rect.height) * 100,
+          x: ((e.clientX - containerRect.left) / containerRect.width) * 100,
+          y: ((e.clientY - containerRect.top) / containerRect.height) * 100,
         };
       };
 
@@ -78,30 +86,37 @@ const Particle = React.forwardRef<HTMLDivElement, ParticleProps>(
         particleEl.style.borderRadius = "50%";
         particleEl.style.pointerEvents = "none";
         particleEl.style.opacity = parsedOpacity;
-        particleEl.style.transition = "transform 0.4s ease-out, opacity 0.6s ease-out";
+        particleEl.style.left = "0";
+        particleEl.style.top = "0";
+        particleEl.style.willChange = "transform";
 
         const initialX = 10 + Math.random() * 80;
         const initialY = 10 + Math.random() * 80;
 
-        particleEl.style.left = `${initialX}%`;
-        particleEl.style.top = `${initialY}%`;
+        const pxX = (initialX / 100) * containerRect.width;
+        const pxY = (initialY / 100) * containerRect.height;
+        particleEl.style.transform = `translate3d(${pxX}px, ${pxY}px, 0)`;
 
         initialPositions.set(particleEl, { x: initialX, y: initialY });
-        particleTargets.set(particleEl, { x: initialX, y: initialY });
+        particlePositions.set(particleEl, { x: initialX, y: initialY });
 
-        container?.appendChild(particleEl);
+        container.appendChild(particleEl);
         particles.push(particleEl);
         return particleEl;
       };
 
       const updateParticles = () => {
-        particles.forEach((particleEl, index) => {
-          const currentTarget = particleTargets.get(particleEl);
-          const initial = initialPositions.get(particleEl);
-          if (!currentTarget || !initial) return;
+        const cw = containerRect.width;
+        const ch = containerRect.height;
 
-          const currentX = parseFloat(particleEl.style.left);
-          const currentY = parseFloat(particleEl.style.top);
+        for (let index = 0; index < particles.length; index++) {
+          const particleEl = particles[index];
+          const currentPos = particlePositions.get(particleEl);
+          const initial = initialPositions.get(particleEl);
+          if (!currentPos || !initial) continue;
+
+          const currentX = currentPos.x;
+          const currentY = currentPos.y;
 
           const time = Date.now() * 0.001 * speed;
           const baseNoiseX = Math.sin(time + index) * 0.5;
@@ -109,7 +124,6 @@ const Particle = React.forwardRef<HTMLDivElement, ParticleProps>(
 
           let targetX = initial.x + baseNoiseX;
           let targetY = initial.y + baseNoiseY;
-          let isCloseToMouse = false;
 
           if (interactive) {
             const dx = mousePosition.x - currentX;
@@ -122,21 +136,20 @@ const Particle = React.forwardRef<HTMLDivElement, ParticleProps>(
               if (mode === "attract") {
                 // Attract: move towards cursor
                 const minDistance = 8;
-                
+
                 if (distance <= minDistance) {
-                  // Particle is close - freeze it at cursor position (no noise, no movement)
+                  // Particle is close enough - freeze at cursor position
                   targetX = mousePosition.x;
                   targetY = mousePosition.y;
-                  isCloseToMouse = true;
                 } else {
-                  // Force is proportional to distance (strong when far, weak when close)
+                  // Force proportional to distance (strong when far, weak when close)
                   const normalizedDistance = Math.min(distance / intensity, 1);
                   const force = distance * repulsionStrength * normalizedDistance * 0.3;
                   targetX = currentX + Math.cos(angle) * force;
                   targetY = currentY + Math.sin(angle) * force;
                 }
               } else {
-                // Repel: move away from cursor (original behavior)
+                // Repel: move away from cursor
                 const force = (intensity - distance) * repulsionStrength;
                 targetX -= Math.cos(angle) * force;
                 targetY -= Math.sin(angle) * force;
@@ -147,14 +160,12 @@ const Particle = React.forwardRef<HTMLDivElement, ParticleProps>(
           targetX = Math.max(5, Math.min(95, targetX));
           targetY = Math.max(5, Math.min(95, targetY));
 
-          particleTargets.set(particleEl, {
-            x: targetX,
-            y: targetY,
-          });
+          const newX = currentX + (targetX - currentX) * movementSpeed;
+          const newY = currentY + (targetY - currentY) * movementSpeed;
 
-          particleEl.style.left = `${currentX + (targetX - currentX) * movementSpeed}%`;
-          particleEl.style.top = `${currentY + (targetY - currentY) * movementSpeed}%`;
-        });
+          particlePositions.set(particleEl, { x: newX, y: newY });
+          particleEl.style.transform = `translate3d(${(newX / 100) * cw}px, ${(newY / 100) * ch}px, 0)`;
+        }
 
         animationFrameId = requestAnimationFrame(updateParticles);
       };
@@ -171,10 +182,11 @@ const Particle = React.forwardRef<HTMLDivElement, ParticleProps>(
 
       return () => {
         document.removeEventListener("mousemove", handleMouseMove);
+        resizeObserver.disconnect();
         cancelAnimationFrame(animationFrameId);
         particles.forEach((particleEl) => {
           particleEl.remove();
-          particleTargets.delete(particleEl);
+          particlePositions.delete(particleEl);
           initialPositions.delete(particleEl);
         });
       };

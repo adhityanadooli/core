@@ -274,47 +274,49 @@ export function ThemeProvider({
     }));
   }, [theme]);
 
-  const themeValue = {
+  const themeValue = useMemo(() => ({
     theme,
     resolvedTheme,
     setTheme: setThemeAndSave,
-  };
+  }), [theme, resolvedTheme, setThemeAndSave]);
 
   const camelToKebab = (str: string): string => {
     return str.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, "$1-$2").toLowerCase();
   };
 
-  const styleValue: StyleProviderState = {
-    ...style,
-    setStyle: (newStyle: Partial<StyleOptions>) => {
-      setStyleState((prevStyle) => ({
-        ...prevStyle,
-        ...newStyle,
-      }));
+  const setStyle = useCallback((newStyle: Partial<StyleOptions>) => {
+    setStyleState((prevStyle) => ({
+      ...prevStyle,
+      ...newStyle,
+    }));
 
-      Object.entries(newStyle).forEach(([key, value]) => {
-        if (value && key !== "setStyle") {
-          const attrName = `data-${camelToKebab(key)}`;
+    Object.entries(newStyle).forEach(([key, value]) => {
+      if (value && key !== "setStyle") {
+        const attrName = `data-${camelToKebab(key)}`;
 
-          if (key === "theme") {
-            if (value === "system") {
-              localStorage.removeItem("data-theme");
-              const resolvedValue = window.matchMedia("(prefers-color-scheme: dark)").matches
-                ? "dark"
-                : "light";
-              document.documentElement.setAttribute(attrName, resolvedValue);
-            } else {
-              localStorage.setItem("data-theme", value.toString());
-              document.documentElement.setAttribute(attrName, value.toString());
-            }
+        if (key === "theme") {
+          if (value === "system") {
+            localStorage.removeItem("data-theme");
+            const resolvedValue = window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+            document.documentElement.setAttribute(attrName, resolvedValue);
           } else {
+            localStorage.setItem("data-theme", value.toString());
             document.documentElement.setAttribute(attrName, value.toString());
-            localStorage.setItem(`data-${camelToKebab(key)}`, value.toString());
           }
+        } else {
+          document.documentElement.setAttribute(attrName, value.toString());
+          localStorage.setItem(`data-${camelToKebab(key)}`, value.toString());
         }
-      });
-    },
-  };
+      }
+    });
+  }, []);
+
+  const styleValue: StyleProviderState = useMemo(() => ({
+    ...style,
+    setStyle,
+  }), [style, setStyle]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {

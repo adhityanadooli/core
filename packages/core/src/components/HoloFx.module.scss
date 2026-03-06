@@ -1,7 +1,9 @@
 .overlay {
     opacity: 0;
-    transition: opacity 0.3s ease-in-out;
+    transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
     pointer-events: none;
+    will-change: opacity, transform;
+    backface-visibility: hidden;
 }
 
 .holoFx {
