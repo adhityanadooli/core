@@ -1,5 +1,7 @@
 .glitchLayer {
     pointer-events: none;
+    will-change: transform, clip-path, opacity;
+    backface-visibility: hidden;
 }
 
 .blueShift {

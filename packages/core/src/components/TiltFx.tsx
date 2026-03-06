@@ -11,17 +11,19 @@ interface TiltFxProps extends React.ComponentProps<typeof Flex> {
 
 const TiltFx: React.FC<TiltFxProps> = ({ children, intensity = 1, ...rest }) => {
   const ref = useRef<HTMLDivElement>(null);
-  let lastCall = 0;
-  let resetTimeout: NodeJS.Timeout;
+  const lastCallRef = useRef(0);
+  const resetTimeoutRef = useRef<NodeJS.Timeout>(undefined);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if ("ontouchstart" in window) return;
 
-    clearTimeout(resetTimeout);
+    if (resetTimeoutRef.current) {
+      clearTimeout(resetTimeoutRef.current);
+    }
 
     const now = Date.now();
-    if (now - lastCall < 16) return;
-    lastCall = now;
+    if (now - lastCallRef.current < 16) return;
+    lastCallRef.current = now;
 
     const element = ref.current;
     if (!element) return;
@@ -40,9 +42,7 @@ const TiltFx: React.FC<TiltFxProps> = ({ children, intensity = 1, ...rest }) => 
     const rotateY = -deltaX * 2 * intensity;
     const translateZ = 30 * intensity;
 
-    window.requestAnimationFrame(() => {
-      element.style.transform = `perspective(1000px) translate3d(0, 0, ${translateZ}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-    });
+    element.style.transform = `perspective(1000px) translate3d(0, 0, ${translateZ}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
   };
 
   const handleMouseLeave = () => {
@@ -50,7 +50,7 @@ const TiltFx: React.FC<TiltFxProps> = ({ children, intensity = 1, ...rest }) => 
 
     const element = ref.current;
     if (element) {
-      resetTimeout = setTimeout(() => {
+      resetTimeoutRef.current = setTimeout(() => {
         element.style.transform =
           "perspective(1000px) translate3d(0, 0, 0) rotateX(0deg) rotateY(0deg)";
       }, 100);

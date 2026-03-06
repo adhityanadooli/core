@@ -1,13 +1,14 @@
 .revealFx {
     mask-size: 400% 100%;
-    transition: all ease-in-out;
+    transition: mask-position ease-in-out, filter ease-in-out, transform ease-in-out;
     mask-image: linear-gradient(to right, black 0%, black 25%, transparent 50%);
-  
+    will-change: mask-position, filter, transform;
+
     &.hidden {
       mask-position: 100% 0;
       filter: blur(1rem);
     }
-  
+
     &.revealed {
       mask-position: 0 0;
       filter: blur(0);
@@ -15,13 +16,13 @@
 }
 
 .hiddenNoMask {
-  transition: all ease-in-out;
+  transition: filter ease-in-out, opacity ease-in-out, transform ease-in-out;
   filter: blur(0.5rem);
   opacity: 0;
 }
 
 .revealedNoMask {
-  transition: all ease-in-out;
+  transition: filter ease-in-out, opacity ease-in-out, transform ease-in-out;
   filter: blur(0);
   opacity: 1;
 }

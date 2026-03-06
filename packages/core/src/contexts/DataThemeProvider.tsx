@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from "react";
 import { ChartMode, ChartVariant } from "../modules/data";
 
 interface ChartOptions {
@@ -99,7 +99,7 @@ export function DataThemeProvider({
     setMounted(true);
   }, []);
 
-  const applyDataVizAttribute = (mode: ChartMode, saveToLocalStorage = false) => {
+  const applyDataVizAttribute = useCallback((mode: ChartMode, saveToLocalStorage = false) => {
     if (typeof document !== "undefined") {
       if (document.documentElement.hasAttribute("data-data-viz")) {
         document.documentElement.removeAttribute("data-data-viz");
@@ -111,15 +111,15 @@ export function DataThemeProvider({
         localStorage.setItem("data-viz-style", mode);
       }
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (mounted) {
       applyDataVizAttribute(chartOptions.mode, false);
     }
-  }, [chartOptions.mode, mounted]);
+  }, [chartOptions.mode, mounted, applyDataVizAttribute]);
 
-  const handleSetChartOptions = (newOptions: Partial<ChartOptions>) => {
+  const handleSetChartOptions = useCallback((newOptions: Partial<ChartOptions>) => {
     setChartOptionsState((prevOptions) => {
       const updatedOptions = {
         ...prevOptions,
@@ -132,12 +132,12 @@ export function DataThemeProvider({
 
       return updatedOptions;
     });
-  };
+  }, [mounted, applyDataVizAttribute]);
 
-  const value: DataThemeState = {
+  const value: DataThemeState = useMemo(() => ({
     ...chartOptions,
     setChartOptions: handleSetChartOptions,
-  };
+  }), [chartOptions, handleSetChartOptions]);
 
   return <DataThemeContext.Provider value={value}>{children}</DataThemeContext.Provider>;
 }
