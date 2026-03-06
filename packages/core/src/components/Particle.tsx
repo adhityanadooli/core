@@ -138,9 +138,11 @@ const Particle = React.forwardRef<HTMLDivElement, ParticleProps>(
                 const minDistance = 8;
 
                 if (distance <= minDistance) {
+                  // Particle is close enough - freeze at cursor position
                   targetX = mousePosition.x;
                   targetY = mousePosition.y;
                 } else {
+                  // Force proportional to distance (strong when far, weak when close)
                   const normalizedDistance = Math.min(distance / intensity, 1);
                   const force = distance * repulsionStrength * normalizedDistance * 0.3;
                   targetX = currentX + Math.cos(angle) * force;
